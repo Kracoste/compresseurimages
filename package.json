@@ -1,0 +1,9 @@
+{
+  "name": "compresseur-image-ecommerce",
+  "version": "1.0.0",
+  "description": "Compresseur d'image HD avec suppression de fond pour e-commerce",
+  "scripts": {
+    "dev": "npx serve . -l 8080 -s",
+    "start": "npx serve . -l 8080 -s"
+  }
+}

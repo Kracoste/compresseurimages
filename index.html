@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compresseur d'Image HD & Suppression de Fond - E-commerce</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <h1>🖼️ Compresseur d'Image E-commerce</h1>
+            <p class="subtitle">Suppression de fond + Compression intelligente à 300 Ko</p>
+        </header>
+
+        <main class="main-content">
+            <!-- Zone de dépôt -->
+            <div class="upload-section" id="uploadSection">
+                <div class="drop-zone" id="dropZone">
+                    <div class="drop-zone-content">
+                        <div class="upload-icon">📁</div>
+                        <h3>Glissez votre image ici</h3>
+                        <p>ou cliquez pour sélectionner</p>
+                        <p class="supported-formats">Formats supportés : JPG, PNG, WebP</p>
+                    </div>
+                    <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" hidden>
+                </div>
+            </div>
+
+            <!-- Paramètres de compression -->
+            <div class="settings-section" id="settingsSection" style="display: none;">
+                <h2>⚙️ Paramètres de Traitement</h2>
+                
+                <!-- Option suppression de fond -->
+                <div class="feature-toggle">
+                    <div class="toggle-card active" id="toggleRemoveBg">
+                        <div class="toggle-icon">✂️</div>
+                        <div class="toggle-info">
+                            <h4>Supprimer le fond</h4>
+                            <p>Détourage automatique pour e-commerce</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="removeBgCheckbox" checked>
+                            <span class="slider-toggle"></span>
+                        </label>
+                    </div>
+                    <div class="toggle-card active" id="toggleCompress">
+                        <div class="toggle-icon">🗃️</div>
+                        <div class="toggle-info">
+                            <h4>Compresser l'image</h4>
+                            <p>Réduire à 300 Ko max</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="compressCheckbox" checked>
+                            <span class="slider-toggle"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Options suppression de fond -->
+                <div class="settings-group" id="bgRemovalSettings">
+                    <h3>✂️ Options de détourage</h3>
+                    <div class="settings-grid">
+                        <div class="setting-item">
+                            <label for="bgColor">Couleur de fond</label>
+                            <select id="bgColor">
+                                <option value="transparent">Transparent (PNG)</option>
+                                <option value="white">Blanc</option>
+                                <option value="custom">Personnalisé</option>
+                            </select>
+                        </div>
+                        <div class="setting-item" id="customColorItem" style="display: none;">
+                            <label for="customBgColor">Couleur personnalisée</label>
+                            <input type="color" id="customBgColor" value="#ffffff">
+                        </div>
+                        <div class="setting-item">
+                            <label for="featherAmount">Lissage des bords</label>
+                            <input type="range" id="featherAmount" value="2" min="0" max="5" step="1">
+                            <span class="range-value" id="featherValue">2px</span>
+                        </div>
+                        <div class="setting-item">
+                            <label for="autoCrop">
+                                <input type="checkbox" id="autoCrop" checked>
+                                Recadrage automatique
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Options compression -->
+                <div class="settings-group" id="compressionSettings">
+                    <h3>🗃️ Options de compression</h3>
+                    <div class="settings-grid">
+                        <div class="setting-item">
+                            <label for="targetSize">Taille cible (Ko)</label>
+                            <input type="number" id="targetSize" value="300" min="50" max="1000">
+                        </div>
+                        <div class="setting-item">
+                            <label for="outputFormat">Format de sortie</label>
+                            <select id="outputFormat">
+                                <option value="auto">Auto (Meilleur)</option>
+                                <option value="webp">WebP</option>
+                                <option value="jpeg">JPEG</option>
+                                <option value="png">PNG</option>
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <label for="preserveResolution">
+                                <input type="checkbox" id="preserveResolution" checked>
+                                Préserver la résolution HD
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label for="maxResolution">Résolution max (px)</label>
+                            <input type="number" id="maxResolution" value="1920" min="800" max="4096">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bouton de lancement -->
+                <div class="start-processing">
+                    <button class="btn btn-large btn-gradient" id="startProcessingBtn">
+                        🚀 Lancer le traitement
+                    </button>
+                </div>
+            </div>
+
+            <!-- Barre de progression -->
+            <div class="progress-section" id="progressSection" style="display: none;">
+                <div class="progress-info">
+                    <span id="progressText">Compression en cours...</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <p class="progress-detail" id="progressDetail">Initialisation...</p>
+            </div>
+
+            <!-- Section de comparaison -->
+            <div class="comparison-section" id="comparisonSection" style="display: none;">
+                <h2>📊 Comparaison Avant/Après</h2>
+                
+                <!-- Badge des opérations effectuées -->
+                <div class="operations-badges" id="operationsBadges">
+                    <span class="badge badge-success" id="badgeBgRemoved" style="display: none;">
+                        ✂️ Fond supprimé
+                    </span>
+                    <span class="badge badge-primary" id="badgeCompressed" style="display: none;">
+                        🗃️ Compressée
+                    </span>
+                </div>
+
+                <div class="stats-container">
+                    <div class="stat-card original">
+                        <h4>📄 Image Originale</h4>
+                        <div class="stat-value" id="originalSize">-</div>
+                        <div class="stat-label">Taille</div>
+                        <div class="stat-extra" id="originalDimensions">-</div>
+                    </div>
+                    <div class="stat-card arrow">
+                        <div class="arrow-icon">➡️</div>
+                        <div class="compression-ratio" id="compressionRatio">-</div>
+                    </div>
+                    <div class="stat-card compressed">
+                        <h4>✅ Image Finale</h4>
+                        <div class="stat-value" id="compressedSize">-</div>
+                        <div class="stat-label">Taille</div>
+                        <div class="stat-extra" id="compressedDimensions">-</div>
+                    </div>
+                </div>
+
+                <div class="quality-indicator">
+                    <span>Qualité préservée :</span>
+                    <div class="quality-bar">
+                        <div class="quality-fill" id="qualityFill"></div>
+                    </div>
+                    <span id="qualityPercent">-</span>
+                </div>
+
+                <!-- Comparateur visuel -->
+                <div class="image-comparison">
+                    <div class="comparison-slider" id="comparisonSlider">
+                        <div class="image-container original-container">
+                            <img id="originalImage" src="" alt="Image originale">
+                            <span class="image-label">Original</span>
+                        </div>
+                        <div class="image-container compressed-container" id="compressedContainer">
+                            <img id="compressedImage" src="" alt="Image compressée">
+                            <span class="image-label">Compressée</span>
+                        </div>
+                        <div class="slider-handle" id="sliderHandle">
+                            <div class="handle-line"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="actions">
+                    <button class="btn btn-primary" id="downloadBtn">
+                        💾 Télécharger l'image compressée
+                    </button>
+                    <button class="btn btn-secondary" id="newImageBtn">
+                        🔄 Nouvelle image
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>Compression intelligente avec préservation de qualité HD</p>
+            <p class="tech-info">Algorithmes adaptatifs • WebP/JPEG optimisé • Compression binaire</p>
+        </footer>
+    </div>
+
+    <script src="background-remover.js"></script>
+    <script src="compressor.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
