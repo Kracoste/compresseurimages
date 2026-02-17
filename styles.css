@@ -158,6 +158,44 @@ body {
     margin-bottom: 1.5rem;
 }
 
+.selected-image-preview {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.85rem;
+    margin-bottom: 1.5rem;
+    background: var(--surface-light);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+}
+
+.selected-image-preview img {
+    width: 96px;
+    height: 96px;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface);
+}
+
+.selected-image-meta {
+    min-width: 0;
+}
+
+.selected-image-name {
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.25rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.selected-image-info {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
 /* Feature Toggle Cards */
 .feature-toggle {
     display: grid;
@@ -355,6 +393,11 @@ input:checked + .slider-toggle:before {
     font-size: 0.875rem;
     color: var(--text-muted);
     font-weight: 500;
+}
+
+.setting-help {
+    font-size: 0.75rem;
+    color: var(--text-muted);
 }
 
 .setting-item input[type="number"],
@@ -591,6 +634,8 @@ input:checked + .slider-toggle:before {
 .comparison-slider {
     position: relative;
     width: 100%;
+    aspect-ratio: 16 / 10;
+    min-height: 260px;
     max-height: 500px;
     overflow: hidden;
     border-radius: var(--radius-lg);
@@ -770,6 +815,17 @@ input:checked + .slider-toggle:before {
     .drop-zone {
         padding: 2rem 1rem;
     }
+
+    .selected-image-preview {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .selected-image-preview img {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 4 / 3;
+    }
     
     .upload-icon {
         font-size: 3rem;
@@ -794,6 +850,10 @@ input:checked + .slider-toggle:before {
     
     .quality-bar {
         width: 100%;
+    }
+
+    .comparison-slider {
+        min-height: 220px;
     }
     
     .actions {

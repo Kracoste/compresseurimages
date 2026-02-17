@@ -68,9 +68,19 @@ class ImageCompressor {
     loadImage(file) {
         return new Promise((resolve, reject) => {
             const img = new Image();
-            img.onload = () => resolve(img);
-            img.onerror = reject;
-            img.src = URL.createObjectURL(file);
+            const objectUrl = URL.createObjectURL(file);
+
+            img.onload = () => {
+                URL.revokeObjectURL(objectUrl);
+                resolve(img);
+            };
+
+            img.onerror = (error) => {
+                URL.revokeObjectURL(objectUrl);
+                reject(error);
+            };
+
+            img.src = objectUrl;
         });
     }
 
@@ -351,8 +361,15 @@ class ImageCompressor {
      * Convertir le canvas en Blob
      */
     canvasToBlob(canvas, mimeType, quality) {
-        return new Promise((resolve) => {
-            canvas.toBlob(resolve, mimeType, quality);
+        return new Promise((resolve, reject) => {
+            canvas.toBlob((blob) => {
+                if (!blob) {
+                    reject(new Error('La compression a échoué: blob vide.'));
+                    return;
+                }
+
+                resolve(blob);
+            }, mimeType, quality);
         });
     }
 

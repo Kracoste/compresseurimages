@@ -31,6 +31,13 @@
             <!-- Paramètres de compression -->
             <div class="settings-section" id="settingsSection" style="display: none;">
                 <h2>⚙️ Paramètres de Traitement</h2>
+                <div class="selected-image-preview" id="selectedImagePreview" style="display: none;">
+                    <img id="selectedImage" src="" alt="Image sélectionnée">
+                    <div class="selected-image-meta">
+                        <p class="selected-image-name" id="selectedImageName"></p>
+                        <p class="selected-image-info" id="selectedImageInfo"></p>
+                    </div>
+                </div>
                 
                 <!-- Option suppression de fond -->
                 <div class="feature-toggle">
@@ -62,6 +69,21 @@
                 <div class="settings-group" id="bgRemovalSettings">
                     <h3>✂️ Options de détourage</h3>
                     <div class="settings-grid">
+                        <div class="setting-item">
+                            <label for="bgRemovalProvider">Moteur de suppression</label>
+                            <select id="bgRemovalProvider">
+                                <option value="local">Local (sans API)</option>
+                                <option value="removebg">remove.bg (clé API)</option>
+                            </select>
+                        </div>
+                        <div class="setting-item" id="removeBgApiKeyItem">
+                            <label for="removeBgApiKey">Clé API remove.bg</label>
+                            <input type="password" id="removeBgApiKey" placeholder="Insérer votre clé API">
+                            <span class="setting-help">La clé est stockée localement dans votre navigateur.</span>
+                        </div>
+                        <div class="setting-item">
+                            <span class="setting-help">Mode local: premier lancement plus long (téléchargement du modèle IA).</span>
+                        </div>
                         <div class="setting-item">
                             <label for="bgColor">Couleur de fond</label>
                             <select id="bgColor">

@@ -11,6 +11,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsSection = document.getElementById('settingsSection');
     const progressSection = document.getElementById('progressSection');
     const comparisonSection = document.getElementById('comparisonSection');
+    const selectedImagePreview = document.getElementById('selectedImagePreview');
+    const selectedImage = document.getElementById('selectedImage');
+    const selectedImageName = document.getElementById('selectedImageName');
+    const selectedImageInfo = document.getElementById('selectedImageInfo');
     
     // Toggle des fonctionnalités
     const removeBgCheckbox = document.getElementById('removeBgCheckbox');
@@ -21,6 +25,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Options suppression de fond
     const bgColorSelect = document.getElementById('bgColor');
+    const bgRemovalProviderSelect = document.getElementById('bgRemovalProvider');
+    const removeBgApiKeyItem = document.getElementById('removeBgApiKeyItem');
+    const removeBgApiKeyInput = document.getElementById('removeBgApiKey');
     const customColorItem = document.getElementById('customColorItem');
     const customBgColor = document.getElementById('customBgColor');
     const featherAmountInput = document.getElementById('featherAmount');
@@ -66,6 +73,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentResult = null;
     let backgroundRemover = null;
     let compressor = null;
+    let selectedImageUrl = null;
+    const REMOVE_BG_API_KEY_STORAGE = 'removebg_api_key';
     
     // Initialisation
     init();
@@ -134,14 +143,57 @@ document.addEventListener('DOMContentLoaded', () => {
             customColorItem.style.display = bgColorSelect.value === 'custom' ? 'block' : 'none';
             updateFormatOptions();
         });
+
+        // Moteur de suppression de fond
+        bgRemovalProviderSelect.addEventListener('change', () => {
+            updateBgProviderSettings();
+        });
+
+        // Persister la clé API remove.bg côté navigateur
+        removeBgApiKeyInput.addEventListener('input', () => {
+            persistRemoveBgApiKey(removeBgApiKeyInput.value.trim());
+        });
         
         // Slider feather
         featherAmountInput.addEventListener('input', () => {
             featherValue.textContent = `${featherAmountInput.value}px`;
         });
         
+        // Restaurer la clé API et l'état des options au chargement
+        removeBgApiKeyInput.value = readPersistedRemoveBgApiKey();
+        customColorItem.style.display = bgColorSelect.value === 'custom' ? 'block' : 'none';
+        featherValue.textContent = `${featherAmountInput.value}px`;
+        updateBgProviderSettings();
+        updateFormatOptions();
+
         // Bouton de lancement
         startProcessingBtn.addEventListener('click', processImage);
+    }
+
+    function updateBgProviderSettings() {
+        const usesRemoveBgApi = bgRemovalProviderSelect.value === 'removebg';
+        removeBgApiKeyItem.style.display = usesRemoveBgApi ? '' : 'none';
+    }
+
+    function readPersistedRemoveBgApiKey() {
+        try {
+            return localStorage.getItem(REMOVE_BG_API_KEY_STORAGE) || '';
+        } catch (error) {
+            console.warn('Impossible de lire la clé API remove.bg depuis localStorage:', error);
+            return '';
+        }
+    }
+
+    function persistRemoveBgApiKey(value) {
+        try {
+            if (value) {
+                localStorage.setItem(REMOVE_BG_API_KEY_STORAGE, value);
+            } else {
+                localStorage.removeItem(REMOVE_BG_API_KEY_STORAGE);
+            }
+        } catch (error) {
+            console.warn('Impossible de persister la clé API remove.bg:', error);
+        }
     }
     
     /**
@@ -166,6 +218,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 jpegOption.disabled = false;
             }
         }
+    }
+
+    function resolveCompressionFormat(doRemoveBg) {
+        const needsTransparency = doRemoveBg && bgColorSelect.value === 'transparent';
+        let format = outputFormatSelect.value;
+
+        if (needsTransparency && format === 'jpeg') {
+            format = 'auto';
+        }
+
+        return format;
     }
     
     /**
@@ -232,6 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         currentFile = file;
+        showSelectedImagePreview(file);
         
         // Afficher les paramètres
         settingsSection.style.display = 'block';
@@ -240,6 +304,33 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Scroll vers les paramètres
         settingsSection.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    /**
+     * Afficher l'aperçu du fichier sélectionné
+     */
+    async function showSelectedImagePreview(file) {
+        if (selectedImageUrl) {
+            URL.revokeObjectURL(selectedImageUrl);
+        }
+
+        selectedImageUrl = URL.createObjectURL(file);
+        selectedImage.src = selectedImageUrl;
+        selectedImageName.textContent = file.name;
+        selectedImageInfo.textContent = formatSize(file.size);
+        selectedImagePreview.style.display = 'flex';
+
+        try {
+            const previewImage = await loadImage(file);
+
+            if (currentFile !== file) {
+                return;
+            }
+
+            selectedImageInfo.textContent = `${previewImage.width} × ${previewImage.height} px • ${formatSize(file.size)}`;
+        } catch (error) {
+            console.warn('Impossible de charger les dimensions de prévisualisation:', error);
+        }
     }
     
     /**
@@ -273,6 +364,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Étape 1: Suppression du fond
             if (doRemoveBg) {
                 updateProgress(0, 'Suppression du fond en cours...');
+
+                const backgroundProvider = bgRemovalProviderSelect.value;
+                const removeBgApiKey = removeBgApiKeyInput.value.trim();
                 
                 // Déterminer la couleur de fond
                 let backgroundColor = null;
@@ -288,8 +382,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 backgroundRemover = new BackgroundRemover({
+                    provider: backgroundProvider,
+                    apiKey: removeBgApiKey,
                     featherAmount: parseInt(featherAmountInput.value),
                     backgroundColor: backgroundColor,
+                    autoCrop: autoCropCheckbox.checked,
                     onProgress: (percent, message) => {
                         // Mapper à 0-50%
                         updateProgress(Math.floor(percent * 0.5), message);
@@ -305,10 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateProgress(50, 'Compression en cours...');
                 
                 // Déterminer le format
-                let format = outputFormatSelect.value;
-                if (format === 'auto' && doRemoveBg && bgColorSelect.value === 'transparent') {
-                    format = 'webp'; // WebP supporte la transparence et compresse bien
-                }
+                const format = resolveCompressionFormat(doRemoveBg);
                 
                 compressor = new ImageCompressor({
                     targetSize: parseInt(targetSizeInput.value) * 1024,
@@ -339,7 +433,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 processedSize: processedBlob.size,
                 processedDimensions: compressionResult ? compressionResult.compressedDimensions :
                     { width: bgRemovalResult.width, height: bgRemovalResult.height },
-                format: compressionResult ? compressionResult.format : 'png',
+                format: compressionResult ? compressionResult.format : (bgRemovalResult.format || 'png'),
                 bgRemoved: doRemoveBg,
                 compressed: doCompress,
                 compressionRatio: ((1 - processedBlob.size / currentFile.size) * 100).toFixed(1),
@@ -363,9 +457,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function loadImage(file) {
         return new Promise((resolve, reject) => {
             const img = new Image();
-            img.onload = () => resolve(img);
-            img.onerror = reject;
-            img.src = URL.createObjectURL(file);
+            const objectUrl = URL.createObjectURL(file);
+
+            img.onload = () => {
+                URL.revokeObjectURL(objectUrl);
+                resolve(img);
+            };
+
+            img.onerror = (error) => {
+                URL.revokeObjectURL(objectUrl);
+                reject(error);
+            };
+
+            img.src = objectUrl;
         });
     }
     
@@ -410,6 +514,19 @@ document.addEventListener('DOMContentLoaded', () => {
             qualityFill.style.background = 'linear-gradient(90deg, #f59e0b, #fbbf24)';
         } else {
             qualityFill.style.background = 'linear-gradient(90deg, #ef4444, #f87171)';
+        }
+
+        // Adapter la hauteur du comparateur aux dimensions de l'image originale
+        if (result.originalDimensions && result.originalDimensions.width > 0 && result.originalDimensions.height > 0) {
+            comparisonSlider.style.aspectRatio = `${result.originalDimensions.width} / ${result.originalDimensions.height}`;
+        }
+
+        if (originalImage.src.startsWith('blob:')) {
+            URL.revokeObjectURL(originalImage.src);
+        }
+
+        if (compressedImage.src.startsWith('blob:')) {
+            URL.revokeObjectURL(compressedImage.src);
         }
         
         // Images de comparaison
@@ -476,13 +593,31 @@ document.addEventListener('DOMContentLoaded', () => {
         // Réinitialiser le slider
         compressedContainer.style.clipPath = 'inset(0 0 0 50%)';
         sliderHandle.style.left = '50%';
+        comparisonSlider.style.removeProperty('aspect-ratio');
         
         // Réinitialiser le champ de fichier
         fileInput.value = '';
+        selectedImagePreview.style.display = 'none';
+        selectedImageName.textContent = '';
+        selectedImageInfo.textContent = '';
+        selectedImage.src = '';
         
         // Libérer les URL d'objets
-        if (originalImage.src) URL.revokeObjectURL(originalImage.src);
-        if (compressedImage.src) URL.revokeObjectURL(compressedImage.src);
+        if (selectedImageUrl) {
+            URL.revokeObjectURL(selectedImageUrl);
+            selectedImageUrl = null;
+        }
+
+        if (originalImage.src.startsWith('blob:')) {
+            URL.revokeObjectURL(originalImage.src);
+        }
+
+        if (compressedImage.src.startsWith('blob:')) {
+            URL.revokeObjectURL(compressedImage.src);
+        }
+
+        originalImage.src = '';
+        compressedImage.src = '';
         
         // Scroll vers le haut
         window.scrollTo({ top: 0, behavior: 'smooth' });
