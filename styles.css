@@ -311,6 +311,7 @@ input:checked + .slider-toggle:before {
 
 /* Range Slider */
 .setting-item input[type="range"] {
+    appearance: none;
     -webkit-appearance: none;
     width: 100%;
     height: 6px;
@@ -320,6 +321,7 @@ input:checked + .slider-toggle:before {
 }
 
 .setting-item input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
     -webkit-appearance: none;
     width: 18px;
     height: 18px;

@@ -84,6 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setupSlider();
         setupButtons();
         setupSettings();
+        trackAnalyticsEvent('app_loaded', { app_name: 'compresseur_image' });
     }
     
     /**
@@ -130,23 +131,39 @@ document.addEventListener('DOMContentLoaded', () => {
             bgRemovalSettings.style.display = removeBgCheckbox.checked ? 'block' : 'none';
             document.getElementById('toggleRemoveBg').classList.toggle('active', removeBgCheckbox.checked);
             updateFormatOptions();
+            trackAnalyticsEvent('setting_changed', {
+                setting_name: 'remove_background',
+                setting_value: removeBgCheckbox.checked
+            });
         });
         
         // Toggle compression
         compressCheckbox.addEventListener('change', () => {
             compressionSettings.style.display = compressCheckbox.checked ? 'block' : 'none';
             document.getElementById('toggleCompress').classList.toggle('active', compressCheckbox.checked);
+            trackAnalyticsEvent('setting_changed', {
+                setting_name: 'compress_image',
+                setting_value: compressCheckbox.checked
+            });
         });
         
         // Couleur de fond
         bgColorSelect.addEventListener('change', () => {
             customColorItem.style.display = bgColorSelect.value === 'custom' ? 'block' : 'none';
             updateFormatOptions();
+            trackAnalyticsEvent('setting_changed', {
+                setting_name: 'background_color_mode',
+                setting_value: bgColorSelect.value
+            });
         });
 
         // Moteur de suppression de fond
         bgRemovalProviderSelect.addEventListener('change', () => {
             updateBgProviderSettings();
+            trackAnalyticsEvent('setting_changed', {
+                setting_name: 'background_provider',
+                setting_value: bgRemovalProviderSelect.value
+            });
         });
 
         // Persister la clé API remove.bg côté navigateur
@@ -290,11 +307,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleFileSelect(file) {
         // Vérifier le type de fichier
         if (!file.type.match(/^image\/(jpeg|png|webp)$/)) {
+            trackAnalyticsEvent('image_file_rejected', {
+                file_type: file.type || 'unknown'
+            });
             alert('Format non supporté. Veuillez utiliser JPG, PNG ou WebP.');
             return;
         }
         
         currentFile = file;
+        trackAnalyticsEvent('image_file_selected', {
+            file_type: file.type,
+            file_extension: getFileExtension(file.name),
+            file_size_kb: bytesToKilobytes(file.size)
+        });
         showSelectedImagePreview(file);
         
         // Afficher les paramètres
@@ -341,8 +366,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const doRemoveBg = removeBgCheckbox.checked;
         const doCompress = compressCheckbox.checked;
+        const backgroundProvider = doRemoveBg ? bgRemovalProviderSelect.value : 'none';
+        const outputFormat = doCompress ? resolveCompressionFormat(doRemoveBg) : 'none';
         
         if (!doRemoveBg && !doCompress) {
+            trackAnalyticsEvent('processing_validation_failed', { reason: 'no_feature_enabled' });
             alert('Veuillez activer au moins une option de traitement.');
             return;
         }
@@ -350,6 +378,16 @@ document.addEventListener('DOMContentLoaded', () => {
         // Afficher la progression
         progressSection.style.display = 'block';
         startProcessingBtn.disabled = true;
+
+        trackAnalyticsEvent('image_processing_started', {
+            remove_background_enabled: doRemoveBg,
+            compression_enabled: doCompress,
+            background_provider: backgroundProvider,
+            background_color_mode: doRemoveBg ? bgColorSelect.value : 'none',
+            target_size_kb: doCompress ? parseInt(targetSizeInput.value) : null,
+            requested_output_format: outputFormat,
+            preserve_resolution: doCompress ? preserveResolutionCheckbox.checked : null
+        });
         
         try {
             let processedBlob = currentFile;
@@ -364,8 +402,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // Étape 1: Suppression du fond
             if (doRemoveBg) {
                 updateProgress(0, 'Suppression du fond en cours...');
-
-                const backgroundProvider = bgRemovalProviderSelect.value;
                 const removeBgApiKey = removeBgApiKeyInput.value.trim();
                 
                 // Déterminer la couleur de fond
@@ -402,7 +438,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateProgress(50, 'Compression en cours...');
                 
                 // Déterminer le format
-                const format = resolveCompressionFormat(doRemoveBg);
+                const format = outputFormat;
                 
                 compressor = new ImageCompressor({
                     targetSize: parseInt(targetSizeInput.value) * 1024,
@@ -439,11 +475,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 compressionRatio: ((1 - processedBlob.size / currentFile.size) * 100).toFixed(1),
                 qualityScore: compressionResult ? compressionResult.qualityScore : 95
             };
+
+            trackAnalyticsEvent('image_processing_completed', {
+                remove_background_enabled: currentResult.bgRemoved,
+                compression_enabled: currentResult.compressed,
+                background_provider: backgroundProvider,
+                output_format: currentResult.format,
+                original_size_kb: bytesToKilobytes(currentResult.originalSize),
+                output_size_kb: bytesToKilobytes(currentResult.processedSize),
+                compression_ratio_pct: Number(currentResult.compressionRatio),
+                quality_score: currentResult.qualityScore
+            });
             
             // Afficher les résultats
             showResults(currentResult);
             
         } catch (error) {
+            trackAnalyticsEvent('image_processing_failed', {
+                remove_background_enabled: doRemoveBg,
+                compression_enabled: doCompress,
+                background_provider: backgroundProvider,
+                requested_output_format: outputFormat,
+                error_message: truncateForAnalytics(error.message)
+            });
             console.error('Erreur de traitement:', error);
             alert('Une erreur est survenue lors du traitement: ' + error.message);
         } finally {
@@ -546,6 +600,14 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function downloadImage() {
         if (!currentResult) return;
+
+        trackAnalyticsEvent('image_downloaded', {
+            output_format: currentResult.format,
+            output_size_kb: bytesToKilobytes(currentResult.processedSize),
+            compression_ratio_pct: Number(currentResult.compressionRatio),
+            remove_background_enabled: currentResult.bgRemoved,
+            compression_enabled: currentResult.compressed
+        });
         
         const link = document.createElement('a');
         link.href = URL.createObjectURL(currentResult.processedBlob);
@@ -566,6 +628,10 @@ document.addEventListener('DOMContentLoaded', () => {
      * Réinitialiser l'application
      */
     function resetApp() {
+        trackAnalyticsEvent('app_reset', {
+            had_result: Boolean(currentResult)
+        });
+
         currentFile = null;
         currentResult = null;
         backgroundRemover = null;
@@ -623,6 +689,58 @@ document.addEventListener('DOMContentLoaded', () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
     
+    /**
+     * Envoyer un événement analytics à GTM/GA4
+     */
+    function trackAnalyticsEvent(eventName, params = {}) {
+        if (!eventName || typeof window === 'undefined') {
+            return;
+        }
+
+        const sanitizedParams = sanitizeAnalyticsParams(params);
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({
+            event: eventName,
+            ...sanitizedParams
+        });
+    }
+
+    function sanitizeAnalyticsParams(params = {}) {
+        const sanitized = {};
+
+        Object.entries(params).forEach(([key, value]) => {
+            if (value === undefined || value === null || value === '') {
+                return;
+            }
+
+            if (typeof value === 'number' && !Number.isFinite(value)) {
+                return;
+            }
+
+            sanitized[key] = value;
+        });
+
+        return sanitized;
+    }
+
+    function bytesToKilobytes(bytes) {
+        return Math.round(bytes / 1024);
+    }
+
+    function getFileExtension(filename) {
+        const parts = String(filename || '').toLowerCase().split('.');
+        return parts.length > 1 ? parts.pop() : 'unknown';
+    }
+
+    function truncateForAnalytics(value, maxLength = 120) {
+        const text = String(value || '');
+        if (text.length <= maxLength) {
+            return text;
+        }
+
+        return `${text.slice(0, maxLength)}...`;
+    }
+
     /**
      * Formater la taille du fichier
      */
