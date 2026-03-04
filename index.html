@@ -37,19 +37,15 @@
                         <p>ou cliquez pour sélectionner</p>
                         <p class="supported-formats">Formats supportés : JPG, PNG, WebP</p>
                     </div>
-                    <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" hidden>
+                    <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" multiple hidden>
                 </div>
             </div>
 
             <!-- Paramètres de compression -->
             <div class="settings-section" id="settingsSection" style="display: none;">
                 <h2>⚙️ Paramètres de Traitement</h2>
-                <div class="selected-image-preview" id="selectedImagePreview" style="display: none;">
-                    <img id="selectedImage" src="" alt="Image sélectionnée">
-                    <div class="selected-image-meta">
-                        <p class="selected-image-name" id="selectedImageName"></p>
-                        <p class="selected-image-info" id="selectedImageInfo"></p>
-                    </div>
+                <div id="selectedImagesContainer" style="display: none;">
+                    <div class="selected-images-list" id="selectedImagesList"></div>
                 </div>
                 
                 <!-- Option suppression de fond -->
@@ -173,10 +169,10 @@
                 <p class="progress-detail" id="progressDetail">Initialisation...</p>
             </div>
 
-            <!-- Section de comparaison -->
+            <!-- Section de comparaison (1 seule image) -->
             <div class="comparison-section" id="comparisonSection" style="display: none;">
                 <h2>📊 Comparaison Avant/Après</h2>
-                
+
                 <!-- Badge des opérations effectuées -->
                 <div class="operations-badges" id="operationsBadges">
                     <span class="badge badge-success" id="badgeBgRemoved" style="display: none;">
@@ -238,6 +234,24 @@
                     </button>
                     <button class="btn btn-secondary" id="newImageBtn">
                         🔄 Nouvelle image
+                    </button>
+                </div>
+            </div>
+
+            <!-- Section résultats multi-images -->
+            <div class="multi-results-section" id="multiResultsSection" style="display: none;">
+                <h2>📊 Résultats du traitement</h2>
+
+                <div class="multi-results-summary" id="multiResultsSummary"></div>
+                <div class="multi-results-grid" id="multiResultsGrid"></div>
+
+                <!-- Actions -->
+                <div class="actions">
+                    <button class="btn btn-primary" id="downloadAllBtn">
+                        💾 Tout télécharger
+                    </button>
+                    <button class="btn btn-secondary" id="newImagesBtn">
+                        🔄 Nouvelles images
                     </button>
                 </div>
             </div>
