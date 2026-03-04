@@ -77,6 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // État de l'application
     let currentFiles = [];
     let currentResults = [];
+    let customNames = []; // Noms personnalisés saisis par l'utilisateur
     let backgroundRemover = null;
     let compressor = null;
     let previewUrls = [];
@@ -369,6 +370,17 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedImagesList.innerHTML = '';
         selectedImagesContainer.style.display = 'block';
 
+        // Initialiser les noms personnalisés (garder les existants si possible)
+        const oldNames = customNames.slice();
+        customNames = files.map((file, i) => {
+            // Garder l'ancien nom si le fichier est le même
+            if (oldNames[i] !== undefined && oldNames[i] !== '') {
+                return oldNames[i];
+            }
+            // Par défaut : nom du fichier sans extension
+            return file.name.replace(/\.[^/.]+$/, '');
+        });
+
         files.forEach((file, index) => {
             const url = URL.createObjectURL(file);
             previewUrls.push(url);
@@ -378,12 +390,18 @@ document.addEventListener('DOMContentLoaded', () => {
             item.innerHTML = `
                 <img src="${url}" alt="${file.name}">
                 <div class="selected-image-meta">
-                    <p class="selected-image-name">${file.name}</p>
+                    <input type="text" class="rename-input" data-index="${index}" value="${customNames[index]}" placeholder="Nom du fichier">
                     <p class="selected-image-info">${formatSize(file.size)}</p>
                 </div>
                 <button class="btn-remove-image" data-index="${index}" title="Retirer cette image">&times;</button>
             `;
             selectedImagesList.appendChild(item);
+
+            // Mettre à jour le nom personnalisé quand l'utilisateur tape
+            const renameInput = item.querySelector('.rename-input');
+            renameInput.addEventListener('input', () => {
+                customNames[index] = renameInput.value;
+            });
 
             // Charger les dimensions en arrière-plan
             loadImage(file).then(img => {
@@ -693,17 +711,24 @@ document.addEventListener('DOMContentLoaded', () => {
             const previewUrl = URL.createObjectURL(result.processedBlob);
             const card = document.createElement('div');
             card.className = 'multi-result-card';
+            const currentName = (customNames[index] && customNames[index].trim()) || result.originalFile.name.replace(/\.[^/.]+$/, '');
             card.innerHTML = `
                 <div class="multi-result-preview">
                     <img src="${previewUrl}" alt="${result.originalFile.name}">
                 </div>
                 <div class="multi-result-info">
-                    <p class="multi-result-name">${result.originalFile.name}</p>
+                    <input type="text" class="rename-input" data-index="${index}" value="${currentName}" placeholder="Nom du fichier">
                     <p class="multi-result-sizes">${formatSize(result.originalSize)} → ${formatSize(result.processedSize)} <span class="multi-result-ratio">(-${result.compressionRatio}%)</span></p>
                     <p class="multi-result-format">${result.format.toUpperCase()} • ${result.processedDimensions.width} × ${result.processedDimensions.height} px</p>
                 </div>
                 <button class="btn btn-small btn-primary multi-result-download" data-index="${index}">💾</button>
             `;
+
+            // Mettre à jour le nom personnalisé
+            const renameInput = card.querySelector('.rename-input');
+            renameInput.addEventListener('input', () => {
+                customNames[index] = renameInput.value;
+            });
             multiResultsGrid.appendChild(card);
         });
 
@@ -725,12 +750,13 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * Générer le nom de fichier pour un résultat
      */
-    function getResultFilename(result) {
-        const originalName = result.originalFile.name.replace(/\.[^/.]+$/, '');
-        const suffix = result.bgRemoved && result.compressed ? '_nobg_compressed' :
-            result.bgRemoved ? '_nobg' : '_compressed';
+    function getResultFilename(result, index) {
+        // Utiliser le nom personnalisé si disponible, sinon le nom original
+        const baseName = (customNames[index] && customNames[index].trim())
+            ? customNames[index].trim()
+            : result.originalFile.name.replace(/\.[^/.]+$/, '');
         const extension = result.format === 'jpeg' ? 'jpg' : result.format;
-        return `${originalName}${suffix}.${extension}`;
+        return `${baseName}.${extension}`;
     }
 
     /**
@@ -750,7 +776,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const link = document.createElement('a');
         link.href = URL.createObjectURL(result.processedBlob);
-        link.download = getResultFilename(result);
+        link.download = getResultFilename(result, index);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -792,6 +818,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         currentFiles = [];
         currentResults = [];
+        customNames = [];
         backgroundRemover = null;
         compressor = null;
 

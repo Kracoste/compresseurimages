@@ -364,6 +364,30 @@ input:checked + .slider-toggle:before {
     margin-bottom: 1.5rem;
 }
 
+.rename-input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.4rem 0.6rem;
+    color: var(--text);
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: inherit;
+    width: 100%;
+    transition: border-color 0.2s;
+}
+
+.rename-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.rename-input::placeholder {
+    color: var(--text-muted);
+    font-weight: 400;
+}
+
 .btn-remove-image {
     background: none;
     border: none;
